@@ -1,0 +1,66 @@
+---
+title: "jterm_project2"
+author: "Kent Williams"
+date: "1/11/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(tidytext)
+library(ggwordcloud)
+library(textdata)
+```
+
+# Analysis for New York
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+NY_times <- tibble(text = read_lines("nyt_2020_compiled"))
+
+NYT_Words <-  NY_times %>% unnest_tokens(word, text)
+NYT_SW <- NYT_Words %>% anti_join(stop_words)
+NYT_Count <- NYT_SW %>% count(word, sort=TRUE)
+```
+
+Top 6 Words (Excluding Stop Words)
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+# Count of Each Word
+NW_WordCount <- NY_times %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>% 
+  count(word, sort = TRUE)
+```
+
+```{r, echo=FALSE, warning = FALSE}
+# Display Word Count
+  # Makes sense that "covid" is the most frequent...
+head(NW_WordCount)
+```
+
+## Sentiment Analysis for NYT
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+NYTSentiment_affin <- NYT_Words %>%
+  inner_join(get_sentiments("afinn"))
+
+NYTSentiment_nrc <- NYT_Words %>%
+  inner_join(get_sentiments("nrc"))
+
+NYTSentiment_bing <- NYT_Words %>%
+  inner_join(get_sentiments("bing"))
+
+table(NYTSentiment_bing$sentiment)
+table(NYTSentiment_nrc$sentiment)
+ta
+```
+
+```{r, echo=FALSE, warning = FALSE}
+(ggplot(data = NYTSentiment_affin, 
+       aes(x=value))+
+  geom_histogram()+
+  ggtitle("NY Times Climate Sentiment Range")+
+  theme_minimal())
+```
