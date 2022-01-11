@@ -3,12 +3,13 @@ title: "jterm_project2"
 author: "Kent Williams"
 date: "1/11/2022"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
 ```
-
 
 ```{r}
 library(tidyverse)
@@ -17,32 +18,25 @@ library(ggwordcloud)
 library(textdata)
 ```
 
-# Analysis for New York
+# Analysis for New York 2020
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
 NY_times <- tibble(text = read_lines("nyt_2020_compiled"))
 
 NYT_Words <-  NY_times %>% unnest_tokens(word, text)
 NYT_SW <- NYT_Words %>% anti_join(stop_words)
 NYT_Count <- NYT_SW %>% count(word, sort=TRUE)
-```
 
-Top 6 Words (Excluding Stop Words)
-```{r, echo=FALSE, warning = FALSE, include=FALSE}
 # Count of Each Word
-NW_WordCount <- NY_times %>%
+NYT_WordCount <- NY_times %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words) %>% 
   count(word, sort = TRUE)
-```
 
-```{r, echo=FALSE, warning = FALSE}
 # Display Word Count
   # Makes sense that "covid" is the most frequent...
 head(NW_WordCount)
-```
 
-## Sentiment Analysis for NYT
-```{r, echo=FALSE, warning = FALSE, include=FALSE}
+# Sentiment Analysis
 NYTSentiment_affin <- NYT_Words %>%
   inner_join(get_sentiments("afinn"))
 
@@ -54,13 +48,133 @@ NYTSentiment_bing <- NYT_Words %>%
 
 table(NYTSentiment_bing$sentiment)
 table(NYTSentiment_nrc$sentiment)
-ta
-```
 
-```{r, echo=FALSE, warning = FALSE}
+# Graphing Sentiment Analysis
 (ggplot(data = NYTSentiment_affin, 
        aes(x=value))+
   geom_histogram()+
   ggtitle("NY Times Climate Sentiment Range")+
   theme_minimal())
+
+# Plot Histogram of the Afinn Values
+ggplot(data=NYTSentiment_affin, 
+       aes(x=value)) +
+  geom_histogram(bins=15) +
+  ggtitle("NY Times Climate Sentiment Range") +
+  theme_minimal()
+
+## Wordcloud: Top 50 Words for NY Times
+ggplot(NW_WordCount[1:50,], aes(label=word, size=n)
+       ) +
+  geom_text_wordcloud() +
+  theme_minimal()
 ```
+
+
+# Analysis for New York 2021
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+NY_times21 <- tibble(text = read_lines("nyt_2021_compiled"))
+
+NYT_Words21 <-  NY_times21 %>% unnest_tokens(word, text)
+NYT_SW21 <- NYT_Words21 %>% anti_join(stop_words)
+NYT_Count21 <- NYT_SW21 %>% count(word, sort=TRUE)
+
+# Count of Each Word
+NYT_WordCount21 <- NY_times21 %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>% 
+  count(word, sort = TRUE)
+
+# Display Word Count
+  # Makes sense that "covid" is the most frequent...
+head(NYT_WordCount21)
+
+# Sentiment Analysis
+NYTSentiment_affin21 <- NYT_Words21 %>%
+  inner_join(get_sentiments("afinn"))
+
+NYTSentiment_nrc21 <- NYT_Words21 %>%
+  inner_join(get_sentiments("nrc"))
+
+NYTSentiment_bing21 <- NYT_Words21 %>%
+  inner_join(get_sentiments("bing"))
+
+table(NYTSentiment_bing21$sentiment)
+table(NYTSentiment_nrc21$sentiment)
+
+# Graphing Sentiment Analysis
+(ggplot(data = NYTSentiment_affin21, 
+       aes(x=value))+
+  geom_histogram()+
+  ggtitle("NY Times Climate Sentiment Range")+
+  theme_minimal())
+
+# Plot Histogram of the Afinn Values
+ggplot(data=NYTSentiment_affin21, 
+       aes(x=value)) +
+  geom_histogram(bins=15) +
+  ggtitle("NY Times Climate Sentiment Range") +
+  theme_minimal()
+
+## Wordcloud: Top 50 Words for NY Times
+ggplot(NYT_WordCount21[1:50,], aes(label=word, size=n)
+       ) +
+  geom_text_wordcloud() +
+  theme_minimal()
+```
+
+# Combined Pacific Northwest (Seattle) and Midwest (Chicago)
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+data_prep <- function(x,y,z){
+  i <- as_tibble(t(x))
+  ii <- unite(i,"text",y:z,remove = TRUE,sep = "")
+}
+
+NY_both_Articles <- c("nyt_2020_compiled", "nyt_2021_compiled")
+
+View(NY_times)
+
+NY_times_bag <- data_prep(NY_times,'V1','V776')
+
+View(NY_times21)
+
+NY_Times_bag_21 <- data_prep(NY_times21,'V1','V1026')
+
+tf_idf_text <- tibble(NY_both_Articles,text=t(tibble(NY_times_bag,NY_Times_bag_21,.name_repair = "universal")))
+
+#View(tf_idf_text)
+
+word_count <- tf_idf_text %>%
+  unnest_tokens(word, text) %>%
+  count(NY_both_Articles, word, sort = TRUE)
+
+
+total_words <- word_count %>% 
+  group_by(NY_both_Articles) %>% 
+  summarize(total = sum(n))
+
+NY_times_words <- left_join(word_count, total_words)
+
+
+
+NY_times_words <- NY_times_words %>%
+  bind_tf_idf(word, NY_both_Articles, n)
+
+
+
+#create word cloud with top 50 words filter by tf_idf by descending order
+wordcloudmw <- NY_times_words[order(-NY_times_words$tf_idf),]
+
+
+
+wordcloudmw_clean <- wordcloudmw[-c(1,4,5,6,7)]
+
+
+
+set.seed(42)
+ggplot(wordcloudmw_clean[1:50,], aes(label = word, size = n)
+       ) +
+  geom_text_wordcloud() +
+  theme_minimal()
+```
+
