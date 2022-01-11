@@ -18,13 +18,34 @@ library(ggwordcloud)
 library(textdata)
 ```
 
+<<<<<<< HEAD
 # Analysis for New York 2020
+=======
+# Analysis for New York and Tampa Bay
+>>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
 NY_times <- tibble(text = read_lines("nyt_2020_compiled"))
 
 NYT_Words <-  NY_times %>% unnest_tokens(word, text)
 NYT_SW <- NYT_Words %>% anti_join(stop_words)
 NYT_Count <- NYT_SW %>% count(word, sort=TRUE)
+<<<<<<< HEAD
+=======
+
+
+TB_times <- tibble(text = read_lines("tampa20compiled"))
+
+TB_Words <-  TB_times %>% unnest_tokens(word, text)
+TB_SW <- TB_Words %>% anti_join(stop_words)
+TB_Count <- TB_SW %>% count(word, sort=TRUE)
+
+TB2_times <- tibble(text = read_lines("tampa2021compiled"))
+
+TB2_Words <-  TB2_times %>% unnest_tokens(word, text)
+TB2_SW <- TB2_Words %>% anti_join(stop_words)
+TB2_Count <- TB2_SW %>% count(word, sort=TRUE)
+```
+>>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
 
 # Count of Each Word
 NYT_WordCount <- NY_times %>%
@@ -36,7 +57,12 @@ NYT_WordCount <- NY_times %>%
   # Makes sense that "covid" is the most frequent...
 head(NW_WordCount)
 
+<<<<<<< HEAD
 # Sentiment Analysis
+=======
+## Sentiment Analysis for NYT and TBT
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+>>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
 NYTSentiment_affin <- NYT_Words %>%
   inner_join(get_sentiments("afinn"))
 
@@ -48,14 +74,53 @@ NYTSentiment_bing <- NYT_Words %>%
 
 table(NYTSentiment_bing$sentiment)
 table(NYTSentiment_nrc$sentiment)
+<<<<<<< HEAD
+=======
+
+###### tampa analysis
+TBTSentiment_afinn <- TB_Words %>%
+  inner_join(get_sentiments("afinn"))
+
+TBTSentiment_nrc <- TB_Words %>%
+  inner_join(get_sentiments("nrc"))
+
+TBTSentiment_bing <- TB_Words %>%
+  inner_join(get_sentiments("bing"))
+
+table(TBTSentiment_bing$sentiment)
+table(TBTSentiment_nrc$sentiment)
+table(TBTSentiment_afinn$value)
+
+TBT2Sentiment_afinn <- TB2_Words %>%
+  inner_join(get_sentiments("afinn"))
+
+TBT2Sentiment_nrc <- TB2_Words %>%
+  inner_join(get_sentiments("nrc"))
+
+TBT2Sentiment_bing <- TB2_Words %>%
+  inner_join(get_sentiments("bing"))
+
+table(TBT2Sentiment_bing$sentiment)
+table(TBT2Sentiment_nrc$sentiment)
+table(TBT2Sentiment_afinn$value)
+
+```
+>>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
 
 # Graphing Sentiment Analysis
 (ggplot(data = NYTSentiment_affin, 
        aes(x=value))+
   geom_histogram()+
-  ggtitle("NY Times Climate Sentiment Range")+
+  ggtitle("NY Times Covid Sentiment Range")+
   theme_minimal())
 
+(ggplot(data = TBTSentiment_afinn, 
+       aes(x=value))+
+  geom_histogram()+
+  ggtitle("Tampa Bay Times Covid Sentiment Range")+
+  theme_minimal())
+
+<<<<<<< HEAD
 # Plot Histogram of the Afinn Values
 ggplot(data=NYTSentiment_affin, 
        aes(x=value)) +
@@ -176,5 +241,13 @@ ggplot(wordcloudmw_clean[1:50,], aes(label = word, size = n)
        ) +
   geom_text_wordcloud() +
   theme_minimal()
+=======
+(ggplot(data = TBT2Sentiment_afinn, 
+       aes(x=value))+
+  geom_histogram()+
+  ggtitle("Tampa Bay Times Covid Sentiment Range")+
+  theme_minimal())
+```
+>>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
 ```
 
