@@ -4,7 +4,7 @@ author: "Campbell Hogg & Kent Williams"
 date: "1/11/2022"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -14,16 +14,21 @@ knitr::opts_chunk$set(echo = FALSE)
 ```{r}
 library(tidyverse)
 library(tidytext)
-library(ggwordcloud)
 library(textdata)
+install.packages("tidyselect")
+library(tidyselect)
+library(stringr)
+library(DT)
+install.packages("topicmodels")
+library(tm)
+library(plotly)
+library(topicmodels)
 ```
 
-# Analysis for New York 2020
-=======
-# Analysis for New York and Tampa Bay
+
 
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
-
+# Analysis for New York and Tampa Bay
 NY_times <- tibble(text = read_lines("nyt_2020_compiled"))
 
 NYT_Words <-  NY_times %>% unnest_tokens(word, text)
@@ -31,7 +36,7 @@ NYT_SW <- NYT_Words %>% anti_join(stop_words)
 NYT_Count <- NYT_SW %>% count(word, sort=TRUE)
 
 
-
+###tampa bay times
 TB_times <- tibble(text = read_lines("tampa20compiled"))
 
 TB_Words <-  TB_times %>% unnest_tokens(word, text)
@@ -44,8 +49,9 @@ TB2_Words <-  TB2_times %>% unnest_tokens(word, text)
 TB2_SW <- TB2_Words %>% anti_join(stop_words)
 TB2_Count <- TB2_SW %>% count(word, sort=TRUE)
 ```
+
+```{r}
 ## Sentiment Analysis for NYT and TBT
-```{r, echo=FALSE, warning = FALSE, include=FALSE}
 NYTSentiment_affin <- NYT_Words %>%
   inner_join(get_sentiments("afinn"))
 
@@ -89,19 +95,23 @@ table(TBT2Sentiment_afinn$value)
 ```
 
 
-# Analysis for New York 2021
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
+
+# Analysis for New York 2021
 NY_times21 <- tibble(text = read_lines("nyt_2021_compiled"))
 
 NYT_Words21 <-  NY_times21 %>% unnest_tokens(word, text)
 NYT_SW21 <- NYT_Words21 %>% anti_join(stop_words)
 NYT_Count21 <- NYT_SW21 %>% count(word, sort=TRUE)
 
-# Count of Each Word
+# Count of Each Word, trying some stemming/lemmatization here as well, python spacy stuff won't work here?
 TBT_WordCount20 <- TB_times %>%
-  unnest_tokens(word, text) %>%
-  anti_join(stop_words) %>% 
-  count(word, sort = TRUE)
+  mutate(doc_id = paste0("doc", row_number())) %>%
+  select(doc_id, everything()) %>%
+  spacy_parse() %>%
+  anti_join(get_stopwords(), by = c("lemma" = "word")) %>%
+  count(lemma, sort = TRUE) 
+
 
 TBT_WordCount21 <- TB2_times %>%
   unnest_tokens(word, text) %>%
@@ -152,62 +162,79 @@ ggplot(TBT_WordCount21[1:50,], aes(label=word, size=n)
   theme_minimal()
 ```
 
-# Combined NYT 2020 and 2021, tf-idf analysis
-```{r, echo=FALSE, warning = FALSE, include=FALSE}
-data_prep <- function(x,y,z){
-  i <- as_tibble(t(x))
-  ii <- unite(i,"text",y:z,remove = TRUE,sep = "")
-}
 
-NY_both_Articles <- c("nyt_2020_compiled", "nyt_2021_compiled")
+```{r, echo=FALSE, warning = FALSE, include=FALSE}
+#try with just one, NYT 2020 articles corpus
+NY_first_Articles <- "nyt_2020_compiled"
 
 View(NY_times)
 
 NY_times_bag <- data_prep(NY_times,'V1','V776')
 
-View(NY_times21)
-
-NY_Times_bag_21 <- data_prep(NY_times21,'V1','V1026')
-
-tf_idf_text <- tibble(NY_both_Articles,text=t(tibble(NY_times_bag,NY_Times_bag_21,.name_repair = "universal")))
+tf_idf_text <- tibble(NY_first_Articles,text=t(tibble(NY_times_bag,.name_repair = "universal")))
 
 View(tf_idf_text)
 
 word_count <- tf_idf_text %>%
   unnest_tokens(word, text) %>%
-  count(NY_both_Articles, word, sort = TRUE)
+  count(NY_first_Articles, word, sort = TRUE)
 
 total_words <- word_count %>% 
-  group_by(NY_both_Articles) %>% 
+  group_by(NY_first_Articles) %>% 
   summarize(total = sum(n))
 
 NY_times_words <- left_join(word_count, total_words)
 
 #use for vizzes
 NY_times_words <- NY_times_words %>%
+  bind_tf_idf(word, NY_first_Articles, n)
+
+
+#Vertical tf-idf histogram
+NY_times_words %>% 
+  slice_max(tf_idf, n = 15) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, tf_idf)) %>%
+  ggplot(aes(tf_idf, word)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = "tf-idf", y = NULL) 
+  #facet_wrap(~author, ncol = 2, scales = "free")
+
+TB_times_words %>% 
+  slice_max(tf_idf, n = 15) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, tf_idf)) %>%
+  ggplot(aes(tf_idf, word)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = "tf-idf", y = NULL) 
+
+```
+
+
+
+
+```{r}
+data_prep <- function(x,y,z){
+  i <- as_tibble(t(x))
+  ii <- unite(i,"text",y:z,remove = TRUE,sep = "")
+}
+NY_both_Articles <- c("nyt_2020_compiled", "nyt_2021_compiled")
+View(NY_times)
+NY_times_bag <- data_prep(NY_times,'V1','V776')
+View(NY_times21)
+NY_Times_bag_21 <- data_prep(NY_times21,'V1','V1026')
+tf_idf_text <- tibble(NY_both_Articles,text=t(tibble(NY_times_bag,NY_Times_bag_21,.name_repair = "universal")))
+View(tf_idf_text)
+word_count <- tf_idf_text %>%
+  unnest_tokens(word, text) %>%
+  count(NY_both_Articles, word, sort = TRUE)
+total_words <- word_count %>% 
+  group_by(NY_both_Articles) %>% 
+  summarize(total = sum(n))
+NY_times_words <- left_join(word_count, total_words)
+#use for vizzes
+NY_times_words <- NY_times_words %>%
   bind_tf_idf(word, NY_both_Articles, n)
-
-#create word cloud with top 50 words filter by tf_idf by descending order
-wordcloudmw <- NY_times_words[order(-NY_times_words$tf_idf),]
-
-wordcloudmw_clean <- wordcloudmw[-c(1,4,5,6,7)]
-
-set.seed(42)
-ggplot(wordcloudmw_clean[1:50,], aes(label = word, size = n)
-       ) +
-  geom_text_wordcloud() +
-  theme_minimal()
-
-#physics_words <- physics %>%
-  #unnest_tokens(word, text) %>%
-  #count(author, word, sort = TRUE)
-
-#plot_physics <- physics_words %>%
-  #bind_tf_idf(word, author, n) %>%
-  #mutate(author = factor(author, levels = c("Galilei, Galileo",
-                                            "Huygens, Christiaan", 
-                                            "Tesla, Nikola",
-                                            "Einstein, Albert")))
 
 #Vertical tf-idf histogram
 NY_times_words %>% 
@@ -220,4 +247,76 @@ NY_times_words %>%
   #facet_wrap(~author, ncol = 2, scales = "free")
 ```
 
+```{r}
+#tampa 2020 and 2021 tf-idf analysis
+data_prep <- function(x,y,z){
+  i <- as_tibble(t(x))
+  ii <- unite(i,"text",y:z,remove = TRUE,sep = "")
+}
+TB_both_Articles <- c("tampa2020compiled", "tampa2021compiled")
+
+TB_times_bag <- data_prep(TB_times,'V1','V607')
+
+TB_Times_bag_21 <- data_prep(TB2_times,'V1','V823')
+
+tf_idf_text <- tibble(TB_both_Articles,text=t(tibble(TB_times_bag,TB_Times_bag_21,.name_repair = "universal")))
+View(tf_idf_text)
+word_count <- tf_idf_text %>%
+  unnest_tokens(word, text) %>%
+  count(TB_both_Articles, word, sort = TRUE)
+total_words <- word_count %>% 
+  group_by(TB_both_Articles) %>% 
+  summarize(total = sum(n))
+TB_times_words <- left_join(word_count, total_words)
+#use for vizzes
+TB_times_words <- TB_times_words %>%
+  bind_tf_idf(word, TB_both_Articles, n)
+
+#Vertical tf-idf histogram
+TB_times_words %>% 
+  slice_max(tf_idf, n = 15) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, tf_idf)) %>%
+  ggplot(aes(tf_idf, word)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = "tf-idf", y = NULL) 
+  #facet_wrap(~author, ncol = 2, scales = "free")
+```
+
+```{r}
+#https://github.com/UVADS/DS-3001/blob/main/07_text_mining/LDA_Example.Rmd
+#LDA and topic modeling
+word_count <- word_count %>% 
+  anti_join(stop_words)
+head(word_count, 15) #might want to remove "19" and do some other stemming stuff for better results
+
+#Creates the data term matrix necessary for running LDA, uses word count for each word, might want to try "ngrams" in unnest as well
+TB_dtm <- word_count %>%
+  cast_dtm(TB_both_Articles, word, n)
+
+
+TB_lda <- LDA(TB_dtm, k = 2, control = list(seed = 1234)) #runs lda function with tampa bay articles compiled in 2020 and 2021 docs
+TB_lda
+
+TB_topics <- tidy(TB_lda, matrix = "beta") #beta represents per topic(time period in this case) per word probabilities
+TB_topics #the model computes the probability of that term being generated from that topic
+
+#We've generate a model based on our two topics (Tampa bay times 2020 and 2021 time periods) so now we will compare the percentage likelihood of the top 10 terms for each topic (Tampa bay times 2020 and 2021 time periods). 
+TB_top_terms <- TB_topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>% 
+  ungroup() %>%
+  arrange(topic, -beta)
+
+TB_top_terms
+
+#plotting for top terms
+ap_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  scale_y_reordered()
+
+```
 
