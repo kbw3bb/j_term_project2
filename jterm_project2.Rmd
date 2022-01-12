@@ -1,6 +1,6 @@
 ---
 title: "jterm_project2"
-author: "Kent Williams"
+author: "Campbell Hogg & Kent Williams"
 date: "1/11/2022"
 output: html_document
 editor_options: 
@@ -18,19 +18,18 @@ library(ggwordcloud)
 library(textdata)
 ```
 
-<<<<<<< HEAD
 # Analysis for New York 2020
 =======
 # Analysis for New York and Tampa Bay
->>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
+
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
+
 NY_times <- tibble(text = read_lines("nyt_2020_compiled"))
 
 NYT_Words <-  NY_times %>% unnest_tokens(word, text)
 NYT_SW <- NYT_Words %>% anti_join(stop_words)
 NYT_Count <- NYT_SW %>% count(word, sort=TRUE)
-<<<<<<< HEAD
-=======
+
 
 
 TB_times <- tibble(text = read_lines("tampa20compiled"))
@@ -45,24 +44,8 @@ TB2_Words <-  TB2_times %>% unnest_tokens(word, text)
 TB2_SW <- TB2_Words %>% anti_join(stop_words)
 TB2_Count <- TB2_SW %>% count(word, sort=TRUE)
 ```
->>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
-
-# Count of Each Word
-NYT_WordCount <- NY_times %>%
-  unnest_tokens(word, text) %>%
-  anti_join(stop_words) %>% 
-  count(word, sort = TRUE)
-
-# Display Word Count
-  # Makes sense that "covid" is the most frequent...
-head(NW_WordCount)
-
-<<<<<<< HEAD
-# Sentiment Analysis
-=======
 ## Sentiment Analysis for NYT and TBT
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
->>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
 NYTSentiment_affin <- NYT_Words %>%
   inner_join(get_sentiments("afinn"))
 
@@ -74,8 +57,7 @@ NYTSentiment_bing <- NYT_Words %>%
 
 table(NYTSentiment_bing$sentiment)
 table(NYTSentiment_nrc$sentiment)
-<<<<<<< HEAD
-=======
+
 
 ###### tampa analysis
 TBTSentiment_afinn <- TB_Words %>%
@@ -105,35 +87,6 @@ table(TBT2Sentiment_nrc$sentiment)
 table(TBT2Sentiment_afinn$value)
 
 ```
->>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
-
-# Graphing Sentiment Analysis
-(ggplot(data = NYTSentiment_affin, 
-       aes(x=value))+
-  geom_histogram()+
-  ggtitle("NY Times Covid Sentiment Range")+
-  theme_minimal())
-
-(ggplot(data = TBTSentiment_afinn, 
-       aes(x=value))+
-  geom_histogram()+
-  ggtitle("Tampa Bay Times Covid Sentiment Range")+
-  theme_minimal())
-
-<<<<<<< HEAD
-# Plot Histogram of the Afinn Values
-ggplot(data=NYTSentiment_affin, 
-       aes(x=value)) +
-  geom_histogram(bins=15) +
-  ggtitle("NY Times Climate Sentiment Range") +
-  theme_minimal()
-
-## Wordcloud: Top 50 Words for NY Times
-ggplot(NW_WordCount[1:50,], aes(label=word, size=n)
-       ) +
-  geom_text_wordcloud() +
-  theme_minimal()
-```
 
 
 # Analysis for New York 2021
@@ -145,7 +98,12 @@ NYT_SW21 <- NYT_Words21 %>% anti_join(stop_words)
 NYT_Count21 <- NYT_SW21 %>% count(word, sort=TRUE)
 
 # Count of Each Word
-NYT_WordCount21 <- NY_times21 %>%
+TBT_WordCount20 <- TB_times %>%
+  unnest_tokens(word, text) %>%
+  anti_join(stop_words) %>% 
+  count(word, sort = TRUE)
+
+TBT_WordCount21 <- TB2_times %>%
   unnest_tokens(word, text) %>%
   anti_join(stop_words) %>% 
   count(word, sort = TRUE)
@@ -168,27 +126,33 @@ table(NYTSentiment_bing21$sentiment)
 table(NYTSentiment_nrc21$sentiment)
 
 # Graphing Sentiment Analysis
-(ggplot(data = NYTSentiment_affin21, 
+(ggplot(data = TBTSentiment_afinn, 
        aes(x=value))+
-  geom_histogram()+
-  ggtitle("NY Times Climate Sentiment Range")+
+  geom_histogram(bins =30)+
+  ggtitle("Tampa Bay Times Covid Sentiment Range")+
   theme_minimal())
 
 # Plot Histogram of the Afinn Values
-ggplot(data=NYTSentiment_affin21, 
+ggplot(data=TBT2Sentiment_afinn, 
        aes(x=value)) +
-  geom_histogram(bins=15) +
-  ggtitle("NY Times Climate Sentiment Range") +
+  geom_histogram(bins=30) +
+  ggtitle("Tampa Bay Times Covid Sentiment Range") +
   theme_minimal()
 
-## Wordcloud: Top 50 Words for NY Times
-ggplot(NYT_WordCount21[1:50,], aes(label=word, size=n)
+
+## Wordcloud: Top 50 Words for Tampa Bay Times
+ggplot(TBT_WordCount20[1:50,], aes(label=word, size=n)
+       ) +
+  geom_text_wordcloud() +
+  theme_minimal()
+
+ggplot(TBT_WordCount21[1:50,], aes(label=word, size=n)
        ) +
   geom_text_wordcloud() +
   theme_minimal()
 ```
 
-# Combined Pacific Northwest (Seattle) and Midwest (Chicago)
+# Combined NYT 2020 and 2021, tf-idf analysis
 ```{r, echo=FALSE, warning = FALSE, include=FALSE}
 data_prep <- function(x,y,z){
   i <- as_tibble(t(x))
@@ -207,12 +171,11 @@ NY_Times_bag_21 <- data_prep(NY_times21,'V1','V1026')
 
 tf_idf_text <- tibble(NY_both_Articles,text=t(tibble(NY_times_bag,NY_Times_bag_21,.name_repair = "universal")))
 
-#View(tf_idf_text)
+View(tf_idf_text)
 
 word_count <- tf_idf_text %>%
   unnest_tokens(word, text) %>%
   count(NY_both_Articles, word, sort = TRUE)
-
 
 total_words <- word_count %>% 
   group_by(NY_both_Articles) %>% 
@@ -220,34 +183,41 @@ total_words <- word_count %>%
 
 NY_times_words <- left_join(word_count, total_words)
 
-
-
+#use for vizzes
 NY_times_words <- NY_times_words %>%
   bind_tf_idf(word, NY_both_Articles, n)
-
-
 
 #create word cloud with top 50 words filter by tf_idf by descending order
 wordcloudmw <- NY_times_words[order(-NY_times_words$tf_idf),]
 
-
-
 wordcloudmw_clean <- wordcloudmw[-c(1,4,5,6,7)]
-
-
 
 set.seed(42)
 ggplot(wordcloudmw_clean[1:50,], aes(label = word, size = n)
        ) +
   geom_text_wordcloud() +
   theme_minimal()
-=======
-(ggplot(data = TBT2Sentiment_afinn, 
-       aes(x=value))+
-  geom_histogram()+
-  ggtitle("Tampa Bay Times Covid Sentiment Range")+
-  theme_minimal())
+
+#physics_words <- physics %>%
+  #unnest_tokens(word, text) %>%
+  #count(author, word, sort = TRUE)
+
+#plot_physics <- physics_words %>%
+  #bind_tf_idf(word, author, n) %>%
+  #mutate(author = factor(author, levels = c("Galilei, Galileo",
+                                            "Huygens, Christiaan", 
+                                            "Tesla, Nikola",
+                                            "Einstein, Albert")))
+
+#Vertical tf-idf histogram
+NY_times_words %>% 
+  slice_max(tf_idf, n = 15) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, tf_idf)) %>%
+  ggplot(aes(tf_idf, word)) +
+  geom_col(show.legend = FALSE) +
+  labs(x = "tf-idf", y = NULL) 
+  #facet_wrap(~author, ncol = 2, scales = "free")
 ```
->>>>>>> 278f204f5f1251e2eff2f61b378ee1f89c78efae
-```
+
 
